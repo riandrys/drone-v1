@@ -16,3 +16,6 @@ class BaseModel(DeclarativeBase):
         return re.sub("(?<!^)(?=[A-Z])", "_", cls.__name__).lower()
 
     id: Mapped[int] = mapped_column(primary_key=True)
+
+
+from .medication import Medication  # noqa

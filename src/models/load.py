@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import (
     Column,
@@ -9,6 +11,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models.base_model import BaseModel
+
+if TYPE_CHECKING:
+    from src.models.medication import Medication
+    from src.models.drone import Drone
+
 
 load_medication = Table(
     "load_medication",
@@ -30,8 +37,8 @@ class Load(BaseModel):
         Integer, ForeignKey("drone.id", ondelete="CASCADE")
     )
 
-    drone: Mapped["Drone"] = relationship(back_populates="loads")  # noqa: F821
+    drone: Mapped[Drone] = relationship("Drone", back_populates="loads")  # noqa: F821
 
-    medications: Mapped[list["Medication"]] = relationship(  # noqa: F821
-        secondary=load_medication, back_populates="loads"
+    medications: Mapped[list[Medication]] = relationship(
+        "Medication", secondary=load_medication, back_populates="loads"
     )

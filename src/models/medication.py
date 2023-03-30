@@ -11,7 +11,7 @@ from src.models.load import Load, load_medication
 class Medication(BaseModel):
     name: Mapped[str] = mapped_column(String)
     weight: Mapped[int] = mapped_column(Integer)
-    _code: Mapped[str] = mapped_column("code", String)
+    _code: Mapped[str] = mapped_column("code", String, unique=True)
     image: Mapped[str] = mapped_column(String, nullable=True)
 
     loads: Mapped[list[Load]] = relationship(

@@ -1,24 +1,14 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field
 from src.models.drone import Status, Models
 from src.schemas.load import Load
 
 
 class DroneBase(BaseModel):
-    serial_number: str
+    serial_number: str = Field(min_length=1, max_length=100)
     model: Models
-    weight_limit: int | None = 500
-    battery_capacity: int | None = 100
+    weight_limit: int | None = Field(gt=0, le=500, default=500)
+    battery_capacity: int | None = Field(ge=0, le=100, default=100)
     state: Status
-
-    @validator("weight_limit")
-    def check_weight_limit(cls, v):
-        assert 0 < v <= 500
-        return v
-
-    @validator("battery_capacity")
-    def check_battery_capacity(cls, v):
-        assert 0 < v <= 100
-        return v
 
 
 class DroneCreate(DroneBase):

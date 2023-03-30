@@ -1,32 +1,19 @@
-import re
-from pydantic import BaseModel, FilePath, validator
+from pydantic import BaseModel, Field, constr
 
 
 class MedicationBase(BaseModel):
-    name: str
-    weight: int
-    code: str
-
-    @validator("name")
-    def check_name(cls, v):
-        pattern = "^[A-Za-z0-9_-]*$"
-        assert re.match(pattern, v)
-        return v
-
-    @validator("code")
-    def check_code(cls, v):
-        pattern = r"^[A-Z_\d]+$"
-        assert re.match(pattern, v)
-        return v
+    name: constr(regex="^[A-Za-z0-9_-]*$", strip_whitespace=True)  # noqa: F722
+    weight: int = Field(gt=0, default=None)
+    code: constr(regex=r"^[A-Z_\d]+$", strip_whitespace=True)  # noqa: F722
 
 
 class MedicationCreate(MedicationBase):
-    image: bytes | None = None
+    pass
 
 
 class Medication(MedicationBase):
     id: int
-    image: FilePath | None = None
+    image: str | None = None
 
     class Config:
         orm_mode = True
