@@ -36,6 +36,7 @@ class Load(BaseModel):
     drone_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("drone.id", ondelete="CASCADE")
     )
+    weight_loaded: Mapped[int] = mapped_column(Integer, nullable=True)
 
     drone: Mapped[Drone] = relationship("Drone", back_populates="loads")  # noqa: F821
 

@@ -4,16 +4,26 @@ import aiofiles
 from fastapi import Depends, FastAPI, HTTPException, status, UploadFile
 from fastapi.staticfiles import StaticFiles
 
-from .dependencies import valid_drone_id, valid_medication_id
+from src.schemas.load import Load, LoadCreate
+
+from .dependencies import (
+    drone_has_been_loaded,
+    valid_drone_id,
+    valid_medication_id,
+    drone_is_avaliable,
+    drone_can_carry_load,
+)
 from .services import (
     get_drones,
     get_drone_by_serial_number as get_by_serial_number,
     create_drone,
     create_medication,
     get_mediaction_by_code,
+    get_medication_by_load,
     get_medications,
+    load_drone,
 )
-from src.schemas.drone import Drone, DroneCreate
+from src.schemas.drone import Drone, DroneCreate, DroneLoading, DroneLoads
 from src.schemas.medication import MedicationCreate, Medication
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config.database import get_async_session
@@ -93,3 +103,56 @@ async def create_new_medication(
     else:
         result = await create_medication(session, medication)
     return result
+
+
+@app.post("/drones/{drone_id}/loading/", response_model=DroneLoading)
+async def loading_drone(
+    load: LoadCreate,
+    drone: Mapping = Depends(drone_is_avaliable),
+    session: AsyncSession = Depends(get_async_session),
+):
+    can_be_carry = await drone_can_carry_load(drone, load.medications, session)
+    if len(can_be_carry):
+        result = await load_drone(
+            session,
+            drone.id,
+            load,
+            can_be_carry.get("medications"),
+            can_be_carry.get("weight_loaded"),
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail="Neither medication could be loaded.",
+        )
+
+    drone_ = drone.__dict__
+    drone_.pop("_sa_instance_state")
+    load_ = result.__dict__
+    load_.pop("_sa_instance_state")
+    load_schema = Load(**load_, medications=can_be_carry.get("medications"))
+
+    respose = DroneLoading(**drone_, load=load_schema)
+    return respose
+
+
+@app.post("/drones/{drone_id}/loaded/", response_model=DroneLoads)
+async def loads_by_drone_id(
+    drone: dict[str, Mapping] = Depends(drone_has_been_loaded),
+    session: AsyncSession = Depends(get_async_session),
+):
+    drone_ = drone.get("drone").__dict__
+    drone_.pop("_sa_instance_state")
+    if drone.get("loads"):
+        drone_loads = []
+        for load in drone.get("loads"):
+            medications = await get_medication_by_load(session, load.id)
+            load_ = load.__dict__
+            load_.pop("_sa_instance_state")
+            load_schema = Load(**load_, medications=medications)
+            drone_loads.append(load_schema)
+
+        respose = DroneLoads(**drone_, loads=drone_loads)
+    else:
+        respose = DroneLoads(**drone_, loads=[])
+    return respose

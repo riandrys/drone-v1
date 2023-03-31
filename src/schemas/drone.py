@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
-from src.models.drone import Status, Models
 from src.schemas.load import Load
+from src.models.drone import Status, Models
 
 
 class DroneBase(BaseModel):
@@ -23,6 +23,13 @@ class Drone(DroneBase):
 
 
 class DroneLoading(Drone):
+    load: Load
+
+    class Config:
+        orm_mode = True
+
+
+class DroneLoads(Drone):
     loads: list[Load] = []
 
     class Config:

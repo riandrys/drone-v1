@@ -1,8 +1,8 @@
-"""Initialize the databse
+"""create models
 
-Revision ID: a4586e5addfb
+Revision ID: e268e1abda81
 Revises:
-Create Date: 2023-03-29 12:26:04.126657
+Create Date: 2023-03-31 10:38:06.533730
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "a4586e5addfb"
+revision = "e268e1abda81"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -59,6 +59,7 @@ def upgrade() -> None:
         sa.Column("image", sa.String(), nullable=True),
         sa.Column("id", sa.Integer(), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("medication_pkey")),
+        sa.UniqueConstraint("code", name=op.f("medication_code_key")),
     )
     op.create_table(
         "load",
@@ -66,6 +67,7 @@ def upgrade() -> None:
         sa.Column("destination", sa.String(length=100), nullable=True),
         sa.Column("create", sa.DateTime(), nullable=False),
         sa.Column("drone_id", sa.Integer(), nullable=False),
+        sa.Column("weight_loaded", sa.Integer(), nullable=True),
         sa.Column("id", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
             ["drone_id"],

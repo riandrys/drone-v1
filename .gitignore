@@ -144,3 +144,5 @@ backup.dump.gz
 
 # VS Code
 .vscode
+
+*.db
