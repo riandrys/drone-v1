@@ -1,8 +1,8 @@
-import logging
 import os
 from collections.abc import Sequence
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.config.database import get_async_session
 from src.schemas.load import LoadCreate
 from src.config.files import IMG_DIR
 from src.schemas.medication import MedicationCreate
@@ -10,11 +10,7 @@ from src.models.drone import Drone, Status
 from src.models.load import Load, load_medication
 from src.models.medication import Medication
 from src.schemas.drone import DroneCreate
-
-
-logging.basicConfig(format="%(asctime)s %(name)s %(levelname)s %(message)s")
-logger = logging.getLogger("Drones")
-logger.setLevel(logging.DEBUG)
+from src.config.logs import get_logger
 
 
 async def get_drones(session: AsyncSession) -> Sequence[Drone]:
@@ -131,3 +127,30 @@ async def get_medication_by_load(session: AsyncSession, load_id: int):
     ]
 
     return medications
+
+
+async def get_available_drones(session: AsyncSession) -> list[Drone]:
+    query = select(Drone).where(
+        Drone.state == Status.IDLE, Drone.battery_capacity >= 25
+    )
+    result = await session.scalars(query)
+    return result.all()
+
+
+async def update_and_check_battery():
+    # subtract 1% of battery
+    async for session in get_async_session():
+        logger = get_logger("battery_check")
+        query = (
+            update(Drone)
+            .where(Drone.battery_capacity > 0)
+            .values(battery_capacity=Drone.battery_capacity - 1)
+            .returning(Drone)
+        )
+        result = await session.scalars(query)
+        await session.commit()
+        rows = result.all()
+        for row in rows:
+            logger.info(
+                f"Drone {row.serial_number}, battery capacity: {row.battery_capacity} %"
+            )

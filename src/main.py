@@ -8,6 +8,7 @@ from src.schemas.load import Load, LoadCreate
 
 from .dependencies import (
     drone_has_been_loaded,
+    drones_avaliable,
     valid_drone_id,
     valid_medication_id,
     drone_is_avaliable,
@@ -22,6 +23,7 @@ from .services import (
     get_medication_by_load,
     get_medications,
     load_drone,
+    update_and_check_battery,
 )
 from src.schemas.drone import Drone, DroneCreate, DroneLoading, DroneLoads
 from src.schemas.medication import MedicationCreate, Medication
@@ -29,9 +31,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config.database import get_async_session
 import os
 from src.config.files import STATIC_FILES_DIR, IMG_DIR
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from src.config.base_config import base_settings
 
 
 app = FastAPI()
+
+
+scheduler = AsyncIOScheduler()
+
+
+async def check_battery():
+    await update_and_check_battery()
+
+
+@app.on_event("startup")
+async def start_background_task():
+    interval = base_settings.check_battery_interval
+    scheduler.add_job(check_battery, "interval", minutes=interval, id="check_battery")
+    scheduler.start()
 
 
 app.mount(STATIC_FILES_DIR, StaticFiles(directory="static"), name="static")
@@ -136,7 +154,7 @@ async def loading_drone(
     return respose
 
 
-@app.post("/drones/{drone_id}/loaded/", response_model=DroneLoads)
+@app.get("/drones/{drone_id}/loaded/", response_model=DroneLoads)
 async def loads_by_drone_id(
     drone: dict[str, Mapping] = Depends(drone_has_been_loaded),
     session: AsyncSession = Depends(get_async_session),
@@ -156,3 +174,8 @@ async def loads_by_drone_id(
     else:
         respose = DroneLoads(**drone_, loads=[])
     return respose
+
+
+@app.get("/drones/available/", response_model=list[Drone])
+async def get_available_drones(drones: list[Drone] = Depends(drones_avaliable)):
+    return drones

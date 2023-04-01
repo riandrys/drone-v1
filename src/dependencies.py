@@ -3,7 +3,12 @@ from fastapi import HTTPException, status, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas.drone import Drone
 from src.config.database import get_async_session
-from .services import get_drone_by_id, get_medication_by_id, get_drone_loads
+from .services import (
+    get_available_drones,
+    get_drone_by_id,
+    get_medication_by_id,
+    get_drone_loads,
+)
 from src.models.drone import Status
 from src.config.logs import get_logger
 
@@ -36,6 +41,12 @@ async def drone_is_avaliable(
             detail="The drone's battery level is below 25 percent",
         )
     return drone
+
+
+async def drones_avaliable(
+    session: AsyncSession = Depends(get_async_session),
+) -> list[Drone]:
+    return await get_available_drones(session)
 
 
 async def drone_has_been_loaded(
@@ -79,11 +90,10 @@ async def drone_can_carry_load(
             total_weight += medication.weight
             if total_weight <= drone.weight_limit:
                 medications_can_carry.append(medication)
-                logger.info("Pruebaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
             else:
                 # in case another medication can be loaded
                 total_weight -= medication.weight
-                logger.debug(
+                logger.warning(
                     f"{medication.name} medication can't be load in drone {drone.serial_number} because its weight exceeds the drone's weight limit"
                 )
     return {"weight_loaded": total_weight, "medications": medications_can_carry}
