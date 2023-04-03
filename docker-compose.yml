@@ -1,0 +1,25 @@
+version: "3.7"
+services:
+  api:
+    container_name: drone-api
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    volumes:
+      - ./:/backend/
+    env_file:
+      - .env
+    ports:
+      - 8000:8000
+    networks:
+      drone_api_network:
+        aliases:
+          - drone-api
+        ipv4_address: 172.88.0.3
+
+networks:
+  drone_api_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.88.0.0/16

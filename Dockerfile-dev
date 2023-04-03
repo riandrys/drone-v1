@@ -1,0 +1,17 @@
+FROM python:3.11.2-slim-bullseye
+WORKDIR /backend
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONBUFFERED 1
+# install system dependencies
+RUN apt-get update \
+  && apt-get -y install netcat gcc\
+  && apt-get clean
+# install python dependencies
+RUN pip install --upgrade pip
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade --timeout=10000 -r /tmp/requirements.txt
+COPY . .
+
+ENV PATH "$PATH:/backend/scripts"
+RUN chmod -R 777 ./
+CMD ["uvicorn", "src.main:app", "--reload", "--proxy-headers", "--host", "0.0.0.0", "--port", "8000"]
