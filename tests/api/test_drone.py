@@ -2,9 +2,18 @@ import datetime
 from httpx import AsyncClient
 import pytest
 from fastapi import status
+from src.schemas.load import LoadCreate
+from src.dependencies import drone_can_carry_load
 from src.schemas.drone import DroneCreate
 from src.models.drone import Models, Status
-from src.services import create_drone, get_available_drones, get_drones, get_medications
+from src.services import (
+    create_drone,
+    get_available_drones,
+    get_drones,
+    get_medications,
+    load_drone,
+    update_drone,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.utils.utils import generate_random_alphanum, random_number
 from tests.utils.seed_db import seed_db
@@ -152,10 +161,12 @@ async def test_loading_drone_with_overweight(
 ) -> None:
     await seed_db()
     available_drones = await get_available_drones(session)
+    drones_sorted = sorted(available_drones, key=lambda x: x.weight_limit)
+    drone = drones_sorted[0]
 
-    drone = available_drones[2]
     medications = await get_medications(session)
-    load_medication = medications[0]
+    medications_sorted = sorted(medications, key=lambda x: x.weight, reverse=True)
+    load_medication = medications_sorted[0]
 
     data = {
         "origin": "La habana",
@@ -171,3 +182,56 @@ async def test_loading_drone_with_overweight(
     contect = resp.json()
     assert resp.status_code == status.HTTP_406_NOT_ACCEPTABLE
     assert contect["detail"] == "Neither medication could be loaded."
+
+
+@pytest.mark.asyncio
+async def test_checking_loaded_medication(
+    client: AsyncClient, session: AsyncSession
+) -> None:
+    await seed_db()
+    available_drones = await get_available_drones(session)
+    drones_sroted = sorted(available_drones, key=lambda x: x.weight_limit, reverse=True)
+
+    drone = drones_sroted[0]
+    medications = await get_medications(session)
+    medication_ids = [m.id for m in medications]
+    can_be_carry = await drone_can_carry_load(drone, medication_ids, session)
+    load = LoadCreate(
+        origin="Playa",
+        destination="Habana",
+        create=str(datetime.datetime.now()),
+        medications=medication_ids,
+    )
+
+    await load_drone(
+        session,
+        drone.id,
+        load,
+        can_be_carry.get("medications"),
+        can_be_carry.get("weight_loaded"),
+    )
+
+    await update_drone(session, drone.id, state=Status.IDLE)
+
+    can_be_carry = await drone_can_carry_load(drone, medication_ids[:3], session)
+    load1 = LoadCreate(
+        origin="Habana",
+        destination="Cerro",
+        create=str(datetime.datetime.now()),
+        medications=medication_ids[:3],
+    )
+    await load_drone(
+        session,
+        drone.id,
+        load1,
+        can_be_carry.get("medications"),
+        can_be_carry.get("weight_loaded"),
+    )
+
+    resp = await client.get(
+        f"/drones/{drone.id}/loaded/",
+    )
+    contect = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert contect["id"] == drone.id
+    assert len(contect["loads"]) == 2

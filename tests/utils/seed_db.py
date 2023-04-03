@@ -77,6 +77,7 @@ medications = [
 async def seed_db():
     async for session in get_async_session():
         async with async_engine.begin() as conn:
+            await conn.run_sync(custom_metadata.drop_all)
             await conn.run_sync(custom_metadata.create_all)
         await session.execute(insert(Drone).values(drones))
         await session.execute(insert(Medication).values(medications))

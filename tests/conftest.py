@@ -12,7 +12,7 @@ from src.main import app
 
 
 test_async_session_maker = async_sessionmaker(
-    async_engine, autocommit=False, autoflush=False
+    async_engine, autocommit=False, autoflush=False, expire_on_commit=False
 )
 
 
