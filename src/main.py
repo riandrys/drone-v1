@@ -3,6 +3,7 @@ from uuid import uuid4
 import aiofiles
 from fastapi import Depends, FastAPI, HTTPException, status, UploadFile
 from fastapi.staticfiles import StaticFiles
+from src.models.drone import Status
 
 from src.schemas.load import Load, LoadCreate
 
@@ -24,6 +25,7 @@ from .services import (
     get_medications,
     load_drone,
     update_and_check_battery,
+    update_drone,
 )
 from src.schemas.drone import Drone, DroneCreate, DroneLoading, DroneLoads
 from src.schemas.medication import MedicationCreate, Medication
@@ -129,8 +131,9 @@ async def loading_drone(
     drone: Mapping = Depends(drone_is_avaliable),
     session: AsyncSession = Depends(get_async_session),
 ):
+    await update_drone(session, drone.id, state=Status.LOADING)
     can_be_carry = await drone_can_carry_load(drone, load.medications, session)
-    if len(can_be_carry):
+    if len(can_be_carry.get("medications")):
         result = await load_drone(
             session,
             drone.id,
@@ -139,6 +142,7 @@ async def loading_drone(
             can_be_carry.get("weight_loaded"),
         )
     else:
+        await update_drone(session, drone.id, state=Status.IDLE)
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail="Neither medication could be loaded.",

@@ -11,7 +11,7 @@ from src.models.load import Load, load_medication
 class Medication(BaseModel):
     name: Mapped[str] = mapped_column(String)
     weight: Mapped[int] = mapped_column(Integer)
-    _code: Mapped[str] = mapped_column("code", String, unique=True)
+    code: Mapped[str] = mapped_column(String, unique=True)
     image: Mapped[str] = mapped_column(String, nullable=True)
 
     loads: Mapped[list[Load]] = relationship(
@@ -25,15 +25,11 @@ class Medication(BaseModel):
             raise ValueError("name field allows only letters, numbers, '-', '_'")
         return name
 
-    @property
-    def code(self):
-        return self._code
-
-    @code.setter
-    def code(self, code):
+    @validates("code")
+    def validate_code(self, key, code):
         pattern = r"^[A-Z_\d]+$"
         if not re.match(pattern, code):
             raise ValueError(
                 "code field allows only upper case letters, underscore and numbers"
             )
-        self._code = code
+        return code
