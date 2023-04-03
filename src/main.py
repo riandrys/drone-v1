@@ -35,7 +35,7 @@ import os
 from src.config.files import STATIC_FILES_DIR, IMG_DIR
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from src.config.base_config import base_settings
-
+from tests.utils.seed_db import seed_db
 
 app = FastAPI()
 
@@ -185,3 +185,9 @@ async def loads_by_drone_id(
 @app.get("/drones/available/", response_model=list[Drone])
 async def get_available_drones(drones: list[Drone] = Depends(drones_avaliable)):
     return drones
+
+
+@app.get("/drones/seed_db/", status_code=200)
+async def seed_data_base():
+    await seed_db()
+    return {"detail": "The database was seeded with drones and medications."}

@@ -1,5 +1,8 @@
 # Drone v-1
-
+### Clone the repository
+```shell
+git clone url_repository
+```
 ### Install dependencies
 Create and activate enviroment
 ```shell
@@ -14,3 +17,14 @@ Install dependencies
 pip install -r requirements.txt
 ```
 
+
+### Run migrations
+```shel
+$ alembic upgrade head
+```
+
+### Run server locally
+With the environment activeted run in folder root of the project:
+```shell
+$ uvicorn src.main:app --reload
+```

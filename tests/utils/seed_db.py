@@ -1,4 +1,3 @@
-import asyncio
 from sqlalchemy import insert
 from src.models.medication import Medication
 from src.config.database import get_async_session
@@ -82,7 +81,3 @@ async def seed_db():
         await session.execute(insert(Drone).values(drones))
         await session.execute(insert(Medication).values(medications))
         await session.commit()
-
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(seed_db())
