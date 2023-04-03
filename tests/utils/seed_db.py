@@ -1,8 +1,10 @@
+import asyncio
 from sqlalchemy import insert
 from src.models.medication import Medication
 from src.config.database import get_async_session
 from src.models.drone import Status, Models, Drone
 from .utils import generate_random_alphanum, random_upper_string, random_number
+from src.config.database import custom_metadata, async_engine
 
 
 drones = [
@@ -74,6 +76,12 @@ medications = [
 
 async def seed_db():
     async for session in get_async_session():
+        async with async_engine.begin() as conn:
+            await conn.run_sync(custom_metadata.create_all)
         await session.execute(insert(Drone).values(drones))
         await session.execute(insert(Medication).values(medications))
         await session.commit()
+
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(seed_db())

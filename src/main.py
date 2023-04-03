@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from uuid import uuid4
 import aiofiles
-from fastapi import Depends, FastAPI, HTTPException, status, UploadFile
+from fastapi import Depends, FastAPI, Form, HTTPException, status, UploadFile
 from fastapi.staticfiles import StaticFiles
 from src.models.drone import Status
 
@@ -20,7 +20,7 @@ from .services import (
     get_drone_by_serial_number as get_by_serial_number,
     create_drone,
     create_medication,
-    get_mediaction_by_code,
+    get_medication_by_code,
     get_medication_by_load,
     get_medications,
     load_drone,
@@ -87,32 +87,34 @@ async def list_medications(session: AsyncSession = Depends(get_async_session)):
     return result
 
 
-@app.get("/medications/{mediaction_id}", response_model=Medication)
+@app.get("/medications/{medication_id}", response_model=Medication)
 async def get_medication(medication: Mapping = Depends(valid_medication_id)):
     return medication
 
 
 @app.post("/medications/", response_model=Medication)
 async def create_new_medication(
-    medication: MedicationCreate = Depends(),
-    file: UploadFile | None = None,
+    name: str = Form(regex="^[A-Za-z0-9_-]*$"),
+    weight: int = Form(gt=0),
+    code: str = Form(regex=r"^[A-Z_\d]+$"),
+    image: UploadFile | None = None,
     session: AsyncSession = Depends(get_async_session),
 ):
-    db_medication = await get_mediaction_by_code(session, code=medication.code)
+    db_medication = await get_medication_by_code(session, code=code)
     if db_medication:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Code already registered"
         )
-
-    if file:
-        if file.content_type not in ["image/png", "image/jpeg"]:
+    medication = MedicationCreate(name=name, code=code, weight=weight)
+    if image:
+        if image.content_type not in ["image/png", "image/jpeg"]:
             raise HTTPException(
                 status_code=status.HTTP_406_NOT_ACCEPTABLE,
                 detail="Only .jpeg or .png files allowed",
             )
 
-        _, ext = os.path.splitext(file.filename)
-        content = await file.read()
+        _, ext = os.path.splitext(image.filename)
+        content = await image.read()
 
         filename = f"{uuid4().hex}{ext}"
         async with aiofiles.open(os.path.join(IMG_DIR, filename), mode="wb") as f:

@@ -55,8 +55,8 @@ async def get_medication_by_id(
     return result
 
 
-async def get_mediaction_by_code(session: AsyncSession, code: str) -> Medication | None:
-    query = select(Medication).where(Medication._code == code)
+async def get_medication_by_code(session: AsyncSession, code: str) -> Medication | None:
+    query = select(Medication).where(Medication.code == code)
     result = await session.execute(query)
     row = result.first()
 
